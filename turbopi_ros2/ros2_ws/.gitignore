@@ -1,0 +1,14 @@
+build/
+install/
+log/
+__pycache__/
+*.py[cod]
+*$py.class
+*.o
+*.obj
+*.so
+*.dll
+*.a
+*.lib
+*.pt
+*.onnx
