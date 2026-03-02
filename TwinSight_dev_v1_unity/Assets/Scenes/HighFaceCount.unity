@@ -2010,6 +2010,7 @@ GameObject:
   - component: {fileID: 433089021}
   - component: {fileID: 433089020}
   - component: {fileID: 433089023}
+  - component: {fileID: 433089024}
   m_Layer: 6
   m_Name: turbopi
   m_TagString: robot
@@ -2090,6 +2091,21 @@ MonoBehaviour:
   backRight: {fileID: 24051072}
   speed: 500
   rotationSpeed: 100
+--- !u!114 &433089024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 433089019}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f01794ed0d6c19909d094abab3d5f8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  topicName: /cmd_vel
+  maxLinearSpeed: 0.3
+  maxTurnSpeed: 1
 --- !u!1 &440136674
 GameObject:
   m_ObjectHideFlags: 8

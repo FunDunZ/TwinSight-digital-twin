@@ -42,8 +42,8 @@ public class MecanumTeleop : MonoBehaviour
         float strafe = Input.GetAxis("Horizontal");
         float turn = 0;
 
-        if (Input.GetKey(KeyCode.Q)) turn = 2f;
-        if (Input.GetKey(KeyCode.E)) turn = -2f;
+        if (Input.GetKey(KeyCode.Q)) turn = 1f;
+        if (Input.GetKey(KeyCode.E)) turn = -1f;
 
         // Mecanum Math
         float fl_speed = (forward + strafe - turn) * speed * -1;
