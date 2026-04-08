@@ -1,17 +1,48 @@
 using UnityEngine;
+using UnityEngine.InputSystem; // We must add this to talk to the New Input System
 
 public class MecanumTeleop : MonoBehaviour
 {
-    public ArticulationBody frontLeft, frontRight, backLeft, backRight;
-    public float speed = 10.0f; // Set this back to a normal number like 10
-    public float rotationSpeed = 100.0f;
+    [Header("Wheel Joints")]
+    public ArticulationBody frontLeft;
+    public ArticulationBody frontRight;
+    public ArticulationBody backLeft;
+    public ArticulationBody backRight;
+    
+    [Header("Speed Settings")]
+    public float speed = 500.0f; 
+    public float turnMultiplier = 2.5f;
+
+    // This creates an input listener for the left thumbstick
+    private InputAction moveAction;
+
+    void Awake()
+    {
+        // 1. Primary: Bind to the Quest's Left Hand Joystick
+        moveAction = new InputAction("Move", binding: "<XRController>{LeftHand}/joystick");
+        
+        // 2. Fallback: Bind to a standard Gamepad (Xbox/PlayStation)
+        moveAction.AddBinding("<Gamepad>/leftStick");
+
+        // 3. Fallback: Bind to PC Keyboard (WASD) for quick Editor testing
+        moveAction.AddCompositeBinding("2DVector")
+            .With("Up", "<Keyboard>/w")
+            .With("Down", "<Keyboard>/s")
+            .With("Left", "<Keyboard>/a")
+            .With("Right", "<Keyboard>/d");
+    }
+    void OnEnable()
+    {
+        moveAction.Enable(); // Turn the listener on
+    }
+
+    void OnDisable()
+    {
+        moveAction.Disable(); // Turn the listener off to save memory
+    }
 
     void Start()
     {
-        // ---------------------------------------------------------
-        // AUTOMATIC PHYSICS FIX
-        // This runs once when you hit Play to unlock the "brakes"
-        // ---------------------------------------------------------
         SetupWheel(frontLeft);
         SetupWheel(frontRight);
         SetupWheel(backLeft);
@@ -20,36 +51,29 @@ public class MecanumTeleop : MonoBehaviour
 
     void SetupWheel(ArticulationBody wheel)
     {
-        // 1. Get the current drive settings
         var drive = wheel.xDrive;
-
-        // 2. FORCE the damping down from "Infinity" to 100
-        drive.damping = 100f;     // The "Parking Brake" is now off
-        drive.stiffness = 0f;     // No springiness
-        drive.forceLimit = 10000f; // Lots of torque available
-
-        // 3. Ensure we are in Velocity mode
+        drive.damping = 100f;     
+        drive.stiffness = 0f;     
+        drive.forceLimit = 10000f; 
         drive.driveType = ArticulationDriveType.Velocity;
-
-        // 4. Apply the changes back to the wheel
         wheel.xDrive = drive;
     }
 
     void Update()
     {
-        // Standard Input
-        float forward = Input.GetAxis("Vertical");
-        float strafe = Input.GetAxis("Horizontal");
-        float turn = 0;
+        // Read the 2D vector coordinates from the physical thumbstick
+        Vector2 joystickInput = moveAction.ReadValue<Vector2>();
 
-        if (Input.GetKey(KeyCode.Q)) turn = 1f;
-        if (Input.GetKey(KeyCode.E)) turn = -1f;
+        // Y is forward/backward, X is left/right
+        float forward = joystickInput.y; 
+        float strafe = 0f; 
+        float turn = -joystickInput.x * turnMultiplier;
 
         // Mecanum Math
         float fl_speed = (forward + strafe - turn) * speed * -1;
-	float fr_speed = (forward - strafe + turn) * speed * -1;
+        float fr_speed = (forward - strafe + turn) * speed * -1;
         float bl_speed = (forward - strafe - turn) * speed;
-	float br_speed = (forward + strafe + turn) * speed;
+        float br_speed = (forward + strafe + turn) * speed;
 
         // Apply Speed
         SetTargetVelocity(frontLeft, fl_speed);

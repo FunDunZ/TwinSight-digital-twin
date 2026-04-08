@@ -10,7 +10,7 @@ services:
       - ROS_DOMAIN_ID=0  # Change if working with multiple robots
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /home/vinh-le/LURA/TwinSight-digital-twin/turbopi_ros2:/home/ubuntu # Mounts your code
+      - "C:\home\TwinSight\LURA\TwinSight-digital-twin\turbopi_ros2":/home/ubuntu # Mounts your code
       - /dev:/dev  # Access to camera and peripherals
     stdin_open: true # Equivalent to -i
     tty: true        # Equivalent to -t

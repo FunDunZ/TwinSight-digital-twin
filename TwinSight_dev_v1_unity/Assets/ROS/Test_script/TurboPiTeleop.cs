@@ -1,15 +1,49 @@
 using UnityEngine;
+using UnityEngine.InputSystem; // Added to talk to the New Input System
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.Geometry;
 
 public class TurboPiTeleop : MonoBehaviour
 {
-    private ROSConnection ros;
-    public string topicName = "/cmd_vel";
+    [Header("Speed Settings")]
+    public float maxLinearSpeed = 0.3f;   
+    public float maxTurnSpeed = 3.0f;     
 
-    // Speed settings for the REAL robot (keep these safe/low)
-    public float maxLinearSpeed = 0.3f;   // Meters per second
-    public float maxTurnSpeed = 1.0f;     // Radians per second
+    [Header("ROS Settings")]
+    public string topicName = "/cmd_vel";
+    public float publishFrequency = 0.1f; 
+
+    private ROSConnection ros;
+    private float timeElapsed;
+    
+    // The new input listener
+    private InputAction moveAction;
+
+    void Awake()
+    {
+        // 1. Primary: Bind to the Quest's Left Hand Joystick
+        moveAction = new InputAction("Move", binding: "<XRController>{LeftHand}/joystick");
+        
+        // 2. Fallback: Bind to a standard Gamepad (Xbox/PlayStation)
+        moveAction.AddBinding("<Gamepad>/leftStick");
+
+        // 3. Fallback: Bind to PC Keyboard (WASD) for quick Editor testing
+        moveAction.AddCompositeBinding("2DVector")
+            .With("Up", "<Keyboard>/w")
+            .With("Down", "<Keyboard>/s")
+            .With("Left", "<Keyboard>/a")
+            .With("Right", "<Keyboard>/d");
+    }
+
+    void OnEnable()
+    {
+        moveAction.Enable(); // Turn the listener on
+    }
+
+    void OnDisable()
+    {
+        moveAction.Disable(); // Turn the listener off to save memory
+    }
 
     void Start()
     {
@@ -19,31 +53,29 @@ public class TurboPiTeleop : MonoBehaviour
 
     void Update()
     {
-        TwistMsg cmdVel = new TwistMsg();
+        timeElapsed += Time.deltaTime;
 
-        // 1. FORWARD / BACK (W/S)
-        // Unity Vertical: +1 (W) / -1 (S)
-        // ROS Linear X: + (Forward) / - (Back)
-        cmdVel.linear.x = -Input.GetAxis("Vertical") * maxLinearSpeed;
-
-        // 2. STRAFE LEFT / RIGHT (A/D)
-        // Unity Horizontal: +1 (D/Right) / -1 (A/Left)
-        // ROS Linear Y: + (Left) / - (Right)
-        // We invert this so pressing A (Negative) becomes Positive Y (Left)
-        //cmdVel.linear.y = Input.GetAxis("Horizontal") * maxLinearSpeed;
-
-        // 3. TURN LEFT / RIGHT (Q/E)
-        // Unity keys: Q (Turn Left) / E (Turn Right)
-        // ROS Angular Z: + (Left) / - (Right)
-        if (Input.GetKey(KeyCode.Q))
+        if (timeElapsed >= publishFrequency)
         {
-            cmdVel.angular.z = maxTurnSpeed; // Positive = Left Turn
-        }
-        else if (Input.GetKey(KeyCode.E))
-        {
-            cmdVel.angular.z = -maxTurnSpeed; // Negative = Right Turn
-        }
+            TwistMsg cmdVel = new TwistMsg();
 
-        ros.Publish(topicName, cmdVel);
+            // Read the 2D vector coordinates from the physical thumbstick or keyboard
+            Vector2 joystickInput = moveAction.ReadValue<Vector2>();
+
+            // 1. FORWARD / BACK
+            // Preserving your original negative sign for linear.x
+            cmdVel.linear.x = -joystickInput.y * maxLinearSpeed; 
+            cmdVel.linear.y = 0.0;
+            cmdVel.linear.z = 0.0;
+
+            // 2. TURN LEFT / RIGHT
+            // D/Right is +1. Inverted so Right creates a negative Z (ROS Standard Right Turn)
+            cmdVel.angular.x = 0.0;
+            cmdVel.angular.y = 0.0;
+            cmdVel.angular.z = -joystickInput.x * maxTurnSpeed;
+
+            ros.Publish(topicName, cmdVel);
+            timeElapsed = 0f;
+        }
     }
 }

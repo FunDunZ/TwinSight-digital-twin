@@ -7,7 +7,7 @@ public class TwinSightTeleop : MonoBehaviour
     public string cmdVelTopic = "/cmd_vel";
     // We will tweak these multipliers later to perfectly match the physical robot's speed
     public float linearSpeedMultiplier = 1.0f;
-    public float angularSpeedMultiplier = 1.0f;
+    public float angularSpeedMultiplier = 2.0f;
 
     void Start()
     {
