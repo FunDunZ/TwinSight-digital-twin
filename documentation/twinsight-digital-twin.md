@@ -139,14 +139,9 @@ Every command/response uses the frame format:
 | **VR headset** | Meta Quest 3 |
 | **Network** | Both PC and robot on same LAN (Wi-Fi or wired) |
 
-> **TO DO LATER** — Add photos of the physical hardware setup, robot assembly, and cable routing.
->
-> To add photos: save images to `documentation/images/` and embed them like this:
-> ```markdown
-> ![Robot assembled](images/hardware-assembled.jpg)
-> ![Cable routing](images/hardware-cables.jpg)
-> ![Top view](images/hardware-top.jpg)
-> ```
+![Robot assembled](images/hardware-assembled.jpg)
+![Top view](images/hardware-top.jpg)
+![Cable routing](images/hardware-cables.jpg)
 
 ---
 
@@ -538,15 +533,8 @@ The `TurboPiTeleop.cs` / `VRTurboPiTeleop.cs` scripts apply a **negative sign** 
 
 ## 8. Installation Instructions
 
-> **Audience:** CS student who has never used ROS 2 or Unity for robotics (Docker knowledge is a bonus but not required right now).  
-> **Goal:** Get the full digital twin running from scratch on a Windows PC.
 
-> **TO DO LATER** — Record a video walkthrough of this entire installation process.
->
-> Upload to YouTube (unlisted is fine), then embed a clickable thumbnail here:
-> ```markdown
-> [![Installation walkthrough](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
-> ```
+[![Installation walkthrough](https://img.youtube.com/vi/CgWuYfGsrPc/0.jpg)](https://youtube.com/shorts/CgWuYfGsrPc?feature=share)
 
 ### 8.1 Prerequisites
 
@@ -743,13 +731,6 @@ Find the GameObject with `VRVideoFeed.cs` and assign the `RawImage` UI element t
 4. **File → Build Settings → Build** — plug in your Quest via USB or use Air Link
 5. Install the `.apk` via Meta Quest Developer Hub
 
-> **TO DO LATER** — Record a video walkthrough of the Unity build + Meta Quest 3 deployment process.
->
-> Upload to YouTube, then embed:
-> ```markdown
-> [![Unity build walkthrough](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
-> ```
-
 ---
 
 ### 8.5 Meta Quest 3 Setup
@@ -798,22 +779,16 @@ Air Link lets you run the Unity Editor in the Quest without deploying an APK.
 
 ## 9. Maps and Environment
 
-> **TO DO LATER** — Write the full Maps and Environment section.
+The Unity scene currently includes two track assets: `Track_Collision.fbx` and `line_follower.fbx` (found in `Assets/`). The physical track photos are below.
 
-This section will cover:
-- The track/map assets used in the Unity scene (currently `Track_Collision.fbx` and `line_follower.fbx` are present in `Assets/`)
-- How the physical robot’s environment relates to the virtual scene
-- SLAM-based map building — running `slam_toolbox` on the robot and visualising the occupancy grid in Unity
-- How to calibrate the virtual environment to match the physical track layout
-- The `Map Materials/` folder in Unity Assets — current material setup status
-
-Photos/video to add once available:
-
-```markdown
 ![Physical track overview](images/track-overview.jpg)
 ![Track with robot on it](images/track-robot.jpg)
-[![Track overview video](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
-```
+
+Future work for this section:
+- SLAM-based map building — running `slam_toolbox` on the robot and visualising the occupancy grid in Unity
+- Calibrating the virtual environment to match the physical track layout
+- Documenting the `Map Materials/` folder in Unity Assets
+
 
 ---
 
@@ -1214,47 +1189,27 @@ The TwinSight digital twin framework is designed to be robot-agnostic. The key a
 
 #### Dr Gilbert's Robot
 
-> **TO DO LATER** — Document integration with Dr Gilbert’s robot platform. Specify:
-> - Hardware specs and what ROS packages it runs
-> - What URDF/mesh files are needed
-> - Which ROS topics map to the existing Unity scripts
-> - Any new Unity scripts that would be required
-> - Whether a new Docker/ROS environment is needed
->
-> Photo of the robot to add once available:
-> ```markdown
-> ![Dr Gilbert's robot](images/dr-gilbert-robot.jpg)
-> ```
+![Dr Gilbert's robot](images/dr-gilbert-robot.jpg)
+
+Full integration details (hardware specs, ROS packages, URDF, topic mapping, Unity changes) to be documented once collaboration begins.
 
 #### Dedicated Line-Following Robot
 
-> **TO DO LATER** — A simpler line-following robot may serve as a more controlled testbed for validating position sync and joint sync before implementing them on the full TurboPi. Document:
-> - Hardware specs
-> - Minimal ROS packages needed
-> - Unity changes required (new URDF import, updated topic names)
->
-> Photo to add:
-> ```markdown
-> ![Line-following robot](images/line-follower-robot.jpg)
-> ```
+A simpler line-following robot may serve as a more controlled testbed for validating position sync and joint sync before implementing them on the full TurboPi.
+
+Full documentation (hardware specs, minimal ROS packages, Unity changes) to be added once the robot is available.
 
 #### Multi-Robot Support
 
-> **TO DO LATER** — Running multiple robots simultaneously in the same digital twin environment. Each robot would use a unique ROS namespace or `ROS_DOMAIN_ID`. The Unity scene would show all twins simultaneously. Document the namespace strategy and Unity scene architecture required.
->
-> Diagram/screenshot to add:
-> ```markdown
-> ![Multi-robot Unity scene](images/multi-robot-scene.jpg)
-> ```
+Running multiple robots simultaneously in the same digital twin environment. Each robot would use a unique ROS namespace or `ROS_DOMAIN_ID`. The Unity scene would show all twins simultaneously.
+
+Namespace strategy and Unity scene architecture to be documented once multi-robot work begins.
 
 ---
 
 ## 14. Achievements
 
 This section records significant milestones reached during the project, including problems discovered in the process.
-
-> Photos and videos for each achievement are embedded in their respective subsections below.
-> Save all images to `documentation/images/` and use `![description](images/filename.jpg)` to embed them.
 
 ---
 
@@ -1271,12 +1226,9 @@ This section records significant milestones reached during the project, includin
 
 **Key challenge solved:** Initial joystick-to-robot mapping had the robot driving backwards and turning in the wrong direction. Fixed by negating both `linear.x` and `angular.z` in the teleop scripts after physical hardware testing.
 
-> **TO DO LATER** — Add photo/video of the Quest 3 running with the robot responding.
->
-> ```markdown
-> ![Quest 3 in use](images/achievement-quest3-in-use.jpg)
-> [![VR teleop demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
-> ```
+![Quest 3 in use](images/achievement-quest3-in-use.jpg)
+
+[![VR teleop demo](https://img.youtube.com/vi/xB9kej4C29k/0.jpg)](https://youtube.com/shorts/xB9kej4C29k?feature=share)
 
 ---
 
@@ -1290,11 +1242,7 @@ This section records significant milestones reached during the project, includin
 - Double-buffer threading pattern implemented to prevent VR frame drops during JPEG decode
 - 15 fps frame-rate cap found to be necessary — without it, continuous JPEG decoding on the Unity main thread dropped VR rendering below 30 fps
 
-> **TO DO LATER** — Add screenshot of the VR panel showing the live robot camera feed.
->
-> ```markdown
-> ![VR camera feed panel](images/achievement-vr-camera-feed.jpg)
-> ```
+![VR camera feed panel](images/achievement-vr-camera-feed.jpg)
 
 ---
 
@@ -1308,11 +1256,7 @@ This section records significant milestones reached during the project, includin
 - `TwinOrientation.cs` subscribing to `/odom` and applying coordinate-converted quaternion to the model
 - ROS Z-up to Unity Y-up quaternion conversion formula (`Unity(x,y,z,w) = ROS(-y,z,-x,w)`) derived and verified through testing
 
-> **TO DO LATER** — Add video showing robot and Unity model rotating in sync.
->
-> ```markdown
-> [![Orientation sync demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
-> ```
+[![Orientation sync demo](https://img.youtube.com/vi/ZGH5NJ1GdrM/0.jpg)](https://youtu.be/ZGH5NJ1GdrM)
 
 ---
 
@@ -1329,13 +1273,8 @@ The Sensor for the line follower, located at the bottom of the TurboPi robot and
 #### Fault 3 — Power usage when plugged into Wall
 The power usage, if plugged into the wall, is not strong enough to power the raspberrypi and the motors attached to the robot. HIGHLY recommend getting a new power supply for the raspberrypi.
 
-> **TO DO LATER** — Add photos documenting each fault and the testing that identified it.
->
-> ```markdown
-> ![Motor direction fault](images/fault-motor-direction.jpg)
-> ![Sensor duct tape fix](images/fault-sensor-duct-tape.jpg)
-> ![Power supply issue](images/fault-power-supply.jpg)
-> ```
+![Sensor duct tape fix](images/fault-sensor-duct-tape.jpg)
+![Power supply issue](images/fault-power-supply.jpg)
 
 ---
 
@@ -1409,7 +1348,7 @@ flowchart LR
 
 ### Running the Digital Twin End-to-End
 
-**On the Robot (Docker container):**
+**On the Robot (Raspberry Pi — SSH in first):**
 
 ```bash
 # 1. Full robot bringup
@@ -1442,7 +1381,7 @@ ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=192.168.
 | `ros2_ws/src/bringup/bringup/temp_odom.py` | Dead-reckoning odometry node |
 | `ros2_ws/src/imu_pi/imu_pi/publish_imu_ros2.py` | BNO055 IMU publisher |
 | `ros2_ws/src/simulations/turbopi_description/urdf/turbopi.xacro` | Source URDF/Xacro |
-| `docker/docker-compose.yml` | Dev environment definition (docker folder deleted — recreate when needed) |
+| `docker/docker-compose.yml` | Dev environment definition — not present currently; recreate when setting up Docker (see [Section 8.2](#82-docker-setup-future-use)) |
 
 ### Known Gotchas
 

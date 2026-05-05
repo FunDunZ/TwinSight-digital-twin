@@ -21,7 +21,7 @@ Install these on your Windows PC before starting:
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/<your-org>/TwinSight-digital-twin.git
+git clone https://github.com/FunDunZ/TwinSight-digital-twin.git
 cd TwinSight-digital-twin
 ```
 
@@ -43,7 +43,7 @@ source install/setup.bash
 ros2 launch bringup bringup.launch.py
 
 # Terminal 2 — Unity bridge
-ros2 launch ros_tcp_endpoint endpoint.py
+ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=<robot-ip>
 ```
 
 ### 4. Open the Unity project
