@@ -9,6 +9,7 @@ import numpy as np
 import mediapipe as mp
 import sdk.pid as pid
 import sdk.yaml_handle as yaml_handle
+import argparse
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -17,15 +18,17 @@ from std_srvs.srv import SetBool, Trigger
 from ros_robot_controller_msgs.msg import MotorsState, SetPWMServoState, PWMServoState
 
 class FaceMeshNode(Node):
-    def __init__(self, name):
+    def __init__(self, name, follow_mode):
         rclpy.init()
         super().__init__(name)
         self.running = True
         self.bridge = CvBridge()
         
+        self.follow_mode = follow_mode
+        self.get_logger().info(f"跟随模式: {follow_mode}")
+
         # pid初始化(pid initialization)
-       	self.car_x_pid = pid.PID(P=0.150, I=0.001, D=0.0001)
-        self.car_y_pid = pid.PID(P=0.002, I=0.001, D=0.0001)
+        self.car_yaw_pid = pid.PID(P=0.015, I=0.003, D=0.0005)
         self.servo_x_pid = pid.PID(P=0.1, I=0.0000, D=0.0000) 
         self.servo_y_pid = pid.PID(P=0.1, I=0.000, D=0.000)
         
@@ -35,6 +38,8 @@ class FaceMeshNode(Node):
         self.center_x, self.center_y, self.area = -1, -1, 0
         self.lock = threading.RLock()
         
+        self.last_angular_z = 0.0
+        self.smooth_alpha = 0.5
         
         self.servo_data = yaml_handle.get_yaml_data(yaml_handle.servo_file_path)
         
@@ -70,8 +75,7 @@ class FaceMeshNode(Node):
         self.center_x, self.center_y, self.area = -1, -1, 0
         self.__isRunning = False
         
-        self.car_x_pid.clear()
-        self.car_y_pid.clear()
+        self.car_yaw_pid.clear()
         self.servo_x_pid.clear()
         self.servo_y_pid.clear()
         
@@ -86,9 +90,7 @@ class FaceMeshNode(Node):
             pwm_list.append(pos)
         msg.state = pwm_list
         self.pwm_pub.publish(msg)    
-        
-    
-    
+            
     def image_callback(self, ros_image):
     
         cv_image = self.bridge.imgmsg_to_cv2(ros_image, "rgb8")
@@ -124,6 +126,9 @@ class FaceMeshNode(Node):
             self.image_queue.put(rgb_image)
         else:           
             self.result_publisher.publish(self.bridge.cv2_to_imgmsg(rgb_image, "rgb8"))
+    
+    def smooth_value(self, current, last, alpha):
+        return alpha * current + (1 - alpha) * last
             
     def set_running_srv_callback(self, request, response):
         self.get_logger().info('\033[1;32m%s\033[0m' % "set_running")
@@ -134,9 +139,6 @@ class FaceMeshNode(Node):
         response.success = True
         response.message = "set_running"
         return response
-
-        
-        
 
     def main(self):
         while True:
@@ -157,70 +159,75 @@ class FaceMeshNode(Node):
             
             if self.is_running:                
                 if self.center_x != -1 and self.center_y != -1:  
-                                  
-                    # 摄像头云台追踪(camera pan-tilt tracking)
-                    # 根据摄像头X轴坐标追踪(track based on the camera X-axis coordinates)
-                    if abs(self.center_x - self.img_w/2.0) < 15: # 移动幅度比较小，则不需要动(if the movement amplitude is small, no action is required)
-                        self.center_x = self.img_w/2.0
-                    self.servo_x_pid.SetPoint = self.img_w/2.0 # 设定(set)
-                    self.servo_x_pid.update(self.center_x)     # 当前(current)
-                    self.servo_x += int(self.servo_x_pid.output)  # 获取PID输出值(get PID output value)
+                    if self.follow_mode in ["camera"]:              
+                        # 摄像头云台追踪(camera pan-tilt tracking)
+                        # 根据摄像头X轴坐标追踪(track based on the camera X-axis coordinates)
+                        if abs(self.center_x - self.img_w/2.0) < 15: # 移动幅度比较小，则不需要动(if the movement amplitude is small, no action is required)
+                            self.center_x = self.img_w/2.0
+                        self.servo_x_pid.SetPoint = self.img_w/2.0 # 设定(set)
+                        self.servo_x_pid.update(self.center_x)     # 当前(current)
+                        self.servo_x += int(self.servo_x_pid.output)  # 获取PID输出值(get PID output value)
+                        
+                        self.servo_x = 800 if self.servo_x < 800 else self.servo_x # 设置舵机范围(set servo range)
+                        self.servo_x = 2200 if self.servo_x > 2200 else self.servo_x
+                        
+                        # 根据摄像头Y轴坐标追踪(track based on the camera Y-axis coordinates)
+                        if abs(self.center_y - self.img_h/2.0) < 10: # 移动幅度比较小，则不需要动(if the movement amplitude is small, no action is required)
+                            self.center_y = self.img_h/2.0
+                        self.servo_y_pid.SetPoint = self.img_h/2.0  
+                        self.servo_y_pid.update(self.center_y)
+                        self.servo_y -= int(self.servo_y_pid.output) # 获取PID输出值(gei PID output value)
+                        
+                        self.servo_y = 1000 if self.servo_y < 1000 else self.servo_y # 设置舵机范围(set servo range)
+                        self.servo_y = 1900 if self.servo_y > 1900 else self.servo_y
+                        self.pwm_controller([1, self.servo_y], [2, self.servo_x]) # 设置舵机移动(set servo movement)
                     
-                    self.servo_x = 800 if self.servo_x < 800 else self.servo_x # 设置舵机范围(set servo range)
-                    self.servo_x = 2200 if self.servo_x > 2200 else self.servo_x
-                    
-                    # 根据摄像头Y轴坐标追踪(track based on the camera Y-axis coordinates)
-                    if abs(self.center_y - self.img_h/2.0) < 10: # 移动幅度比较小，则不需要动(if the movement amplitude is small, no action is required)
-                        self.center_y = self.img_h/2.0
-                    self.servo_y_pid.SetPoint = self.img_h/2.0  
-                    self.servo_y_pid.update(self.center_y)
-                    self.servo_y -= int(self.servo_y_pid.output) # 获取PID输出值(gei PID output value)
-                    
-                    self.servo_y = 1000 if self.servo_y < 1000 else self.servo_y # 设置舵机范围(set servo range)
-                    self.servo_y = 1900 if self.servo_y > 1900 else self.servo_y
-                    self.pwm_controller([1, self.servo_y], [2, self.servo_x]) # 设置舵机移动(set servo movement)
-                    
-                    
-                    # 车身跟随追踪(vehicle following tracking)
-                    # 根据目标大小进行远近追踪(distance tracking based on the target size)
-                    if abs(self.area - 30000) < 2000 or self.servo_y < 1100:
-                        self.car_y_pid.SetPoint = self.area
-                    else:
-                        self.car_y_pid.SetPoint = 30000
-                    self.car_y_pid.update(self.area)
-                    dy = self.car_y_pid.output   # 获取PID输出值(get PID output value)
-                    dy = 0 if abs(dy) < 20 else dy # 设置速度范围(set velocity range)
-                    
-                    # 根据X轴舵机值进行追踪(track based on X-axis servo value)
-                    if abs(self.servo_x - self.servo2) < 15:
-                        self.car_x_pid.SetPoint = self.servo_x
-                    else:
-                        self.car_x_pid.SetPoint = self.servo2
-                    self.car_x_pid.update(self.servo_x)
-                    dx = self.car_x_pid.output   # 获取PID输出值(get PID output value)
-                    dx = 0 if abs(dx) < 20 else dx # 设置速度范围(set velocity range)
-                   
-                    twist.linear.x = dx / 100
-                    twist.linear.y = dy / 100
-                    
-                    self.mecanum_pub.publish(twist)
-                    
-                    self.car_en = True
+                    if self.follow_mode in ["chassis"]:
+
+                        img_center_x = self.img_w / 2.0  # 图像水平中心
+                        yaw_error = self.center_x - img_center_x
+                        
+                        self.car_yaw_pid.SetPoint = 0.0  
+                        self.car_yaw_pid.update(yaw_error)  # 更新PID
+                        raw_angular_z = self.car_yaw_pid.output  
+                        
+                        if abs(yaw_error) < 15:
+                            raw_angular_z = 0.0
+                        
+                        smooth_angular_z = self.smooth_value(raw_angular_z, self.last_angular_z, self.smooth_alpha)
+                        smooth_angular_z = np.clip(smooth_angular_z, -2.0, 2.0)  
+                        self.last_angular_z = smooth_angular_z
+                        
+                        twist.angular.z = smooth_angular_z  
+                        
+                        self.mecanum_pub.publish(twist)
+                        self.car_en = True
+
                 else:
                     if self.car_en:                       
                         self.car_en = False
                         self.mecanum_pub.publish(Twist())  
+                        self.car_yaw_pid.clear()
+                        self.last_angular_z = 0.0
             else:
                 if self.car_en: 
                     self.car_en = False
                     self.mecanum_pub.publish(Twist())                                       
+                    self.car_yaw_pid.clear()
+                    self.last_angular_z = 0.0
                 
               
         cv2.destroyAllWindows()
         rclpy.shutdown()
 
 def main():
-    node = FaceMeshNode('face_landmarker')
+    parser = argparse.ArgumentParser(description='支持摄像头跟随和车体跟随模式选择')
+    parser.add_argument('--mode',
+                         type=str,
+                         choices=['camera', 'chassis'],
+                         default='camera')
+    args = parser.parse_args()                     
+    node = FaceMeshNode('face_landmarker', args.mode)
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

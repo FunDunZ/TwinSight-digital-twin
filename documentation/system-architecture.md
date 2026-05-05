@@ -13,17 +13,15 @@ flowchart LR
             BNO["BNO055 IMU\n(partial - on Pi only)"]
         end
 
-        subgraph DOCKER["Docker Container\nosrf/ros:humble-desktop-full"]
-            subgraph ROS2["ROS 2 Humble"]
-                HAL["ros_robot_controller\nHAL Node"]
-                CTRL["mecanum_chassis"]
-                CAM_N["usb_cam_node"]
-                SON_N["sonar_controller_node\n(not in default bringup)"]
-                APPS["App Nodes\nline_following / tracking\navoidance / gesture / qrcode"]
-                AI_N["AI Nodes\nvocal_detect / agent_process\ntts / llm_*\n(launched separately)"]
-                TCP_EP["ROS-TCP-Endpoint\n:10000\n(launched separately)"]
-                MISC["web_video_server\nrosbridge WebSocket"]
-            end
+        subgraph ROS2["ROS 2 Humble (native — Docker not currently in use)"]
+            HAL["ros_robot_controller\nHAL Node"]
+            CTRL["mecanum_chassis"]
+            CAM_N["usb_cam_node"]
+            SON_N["sonar_controller_node\n(not in default bringup)"]
+            APPS["App Nodes\nline_following / tracking\navoidance / gesture / qrcode"]
+            AI_N["AI Nodes\nvocal_detect / agent_process\ntts / llm_*\n(launched separately)"]
+            TCP_EP["ROS-TCP-Endpoint\n:10000\n(launched separately)"]
+            MISC["web_video_server\nrosbridge WebSocket"]
         end
 
         CAM --> CAM_N
@@ -80,20 +78,18 @@ flowchart LR
             BNO["BNO055 IMU"]
         end
 
-        subgraph DOCKER["Docker Container\nosrf/ros:humble-desktop-full"]
-            subgraph ROS2["ROS 2 Humble"]
-                HAL["ros_robot_controller\nHAL Node"]
-                CTRL["mecanum_chassis"]
-                CAM_N["usb_cam_node"]
-                SON_N["sonar_controller_node"]
-                APPS["App Nodes\nline_following / tracking\navoidance / gesture / qrcode"]
-                AI_N["AI Nodes\nvocal_detect / agent_process\ntts / llm_*"]
-                BNO_N["BNO055 Driver Node"]
-                IMU_CAL["imu_calib\n(apply_calib)"]
-                IMU_FLT["imu_complementary_filter"]
-                TCP_EP["ROS-TCP-Endpoint :10000"]
-                MISC["web_video_server\nrosbridge WebSocket\n(planned for removal)"]
-            end
+        subgraph ROS2_FULL["ROS 2 Humble (native — Docker not currently in use)"]
+            HAL["ros_robot_controller\nHAL Node"]
+            CTRL["mecanum_chassis"]
+            CAM_N["usb_cam_node"]
+            SON_N["sonar_controller_node"]
+            APPS["App Nodes\nline_following / tracking\navoidance / gesture / qrcode"]
+            AI_N["AI Nodes\nvocal_detect / agent_process\ntts / llm_*"]
+            BNO_N["BNO055 Driver Node"]
+            IMU_CAL["imu_calib\n(apply_calib)"]
+            IMU_FLT["imu_complementary_filter"]
+            TCP_EP["ROS-TCP-Endpoint :10000"]
+            MISC["web_video_server\nrosbridge WebSocket\n(planned for removal)"]
         end
 
         CAM --> CAM_N

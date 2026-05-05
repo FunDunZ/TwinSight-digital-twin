@@ -128,7 +128,7 @@ class LineFollowingNode(Node):
         self.image_height = None
         self.image_width = None
         self.bridge = CvBridge()
-        self.last_target_time = None
+        self.last_target_time = 0
         self.heart = None  #  心跳包对象
 
         

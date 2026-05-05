@@ -23,7 +23,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'startup_check = bringup.startup_check:main'
+            'startup_check = bringup.startup_check:main',
+            'temp_odom = bringup.temp_odom:main'
         ],
     },
 )

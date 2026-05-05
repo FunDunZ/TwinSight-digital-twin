@@ -22,6 +22,17 @@ class RobotController(Node):
     def __init__(self):
         super().__init__('robot_controller')
 
+        # --- ROS 2 PARAMETERS (Acceleration Ramp) ---
+        self.declare_parameter('max_velocity', 0.5)
+        self.declare_parameter('accel_step', 0.05)
+        self.declare_parameter('angular_step', 2.0)  # Smooth out the turning as well
+
+        # Internal tracking variables for the ramp
+        self.current_speed = 0.0
+        self.target_speed = 0.0
+        self.current_angular = 0.0
+        self.target_angular = 0.0
+
         # 发布者初始化
         self.mecanum_pub = self.create_publisher(Twist, '/cmd_vel', 1)
         self.color_pub = self.create_publisher(String, '/detected_color', 10)
@@ -96,10 +107,14 @@ class RobotController(Node):
         return response
 
     def main_control_loop(self):
+        # Fetch the live parameters from the ROS server every loop (10Hz)
+        self.live_max_vel = self.get_parameter('max_velocity').get_parameter_value().double_value
+        self.live_accel_step = self.get_parameter('accel_step').get_parameter_value().double_value
+        self.live_angular_step = self.get_parameter('angular_step').get_parameter_value().double_value
+
         if self.isRunning:
             # 根据识别到的颜色切换行为
             if self.detect_color == 'red':
-                # 红灯：停止巡线，蜂鸣器响一次，红色灯光，停止机器人
                 self.line_following_enabled = False
                 if not self.buzzer_played:
                     self.play_buzzer()
@@ -108,27 +123,20 @@ class RobotController(Node):
                 self.stop_robot()
 
             elif self.detect_color == 'green':
-                # 绿灯：开启巡线，绿色灯光，根据巡线逻辑动态控制机器人运动
                 self.line_following_enabled = True
                 self.set_rgb("green")
                 self.buzzer_played = False
-                # 巡线动作由巡线函数调用
 
             elif self.detect_color == 'yellow':
-                # 黄灯：关闭巡线，黄色灯光，停止机器人
                 self.set_rgb("yellow")
                 self.line_following_enabled = False
                 self.stop_robot()
                 self.buzzer_played = False
 
             else:
-                # 未识别颜色或其他色，关闭灯光，关闭蜂鸣器启用状态
                 self.set_rgb("None")
                 self.buzzer_played = False
-                # 如果巡线使能，继续巡线，否则停止
-                if self.line_following_enabled:
-                    self.line_following()
-                else:
+                if not self.line_following_enabled:
                     self.stop_robot()
 
             # 当巡线使能时调用巡线控制
@@ -138,42 +146,63 @@ class RobotController(Node):
                 self.stop_robot()
 
         else:
-            # 不运行游戏时全部停止，关闭灯光，巡线使能复原
             self.stop_robot()
             self.set_rgb("None")
             self.line_following_enabled = True
             self.buzzer_played = False
 
+        # ==========================================
+        # --- THE ACCELERATION RAMP ---
+        # ==========================================
+        
+        # 1. Linear Ramp (Forward/Backward Speed)
+        if self.current_speed < self.target_speed:
+            self.current_speed += self.live_accel_step
+            if self.current_speed > self.target_speed:
+                self.current_speed = self.target_speed
+        elif self.current_speed > self.target_speed:
+            self.current_speed -= self.live_accel_step
+            if self.current_speed < self.target_speed:
+                self.current_speed = self.target_speed
+
+        # 2. Angular Ramp (Turning Speed)
+        if self.current_angular < self.target_angular:
+            self.current_angular += self.live_angular_step
+            if self.current_angular > self.target_angular:
+                self.current_angular = self.target_angular
+        elif self.current_angular > self.target_angular:
+            self.current_angular -= self.live_angular_step
+            if self.current_angular < self.target_angular:
+                self.current_angular = self.target_angular
+
+        # 3. Publish the smoothed speed
+        ramp_cmd = Twist()
+        ramp_cmd.linear.x = -self.current_speed
+        ramp_cmd.angular.z = self.current_angular
+        self.mecanum_pub.publish(ramp_cmd)
+
+
     def stop_robot(self):
-        """停止机器人：停止所有运动指令"""
-        stop_cmd = Twist()
-        self.mecanum_pub.publish(stop_cmd)
+        """停止机器人：目标速度设为0"""
+        self.target_speed = 0.0
+        self.target_angular = 0.0
 
     def move_forward(self):
         """机器人直行前进"""
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.5  # 适中速度前进
-        move_cmd.angular.z = 0.0
-        self.mecanum_pub.publish(move_cmd)
+        self.target_speed = self.live_max_vel
+        self.target_angular = 0.0
 
     def line_following(self):
-        """
-        巡线逻辑（已将传感器信号逻辑反转）：
-        现在True表示检测到黑线，False表示未检测到黑线，符合您的需求。
-        """
-
         raw_data = self.line.readData()
-        # 反转传感器状态，方便后续判断，True表示检测到黑线
         sensor_data = [not s for s in raw_data]
 
         self.get_logger().info(f"传感器状态（True检测到线）: S0={sensor_data[0]}, S1={sensor_data[1]}, S2={sensor_data[2]}, S3={sensor_data[3]}")
 
-        # 根据反转后的信号状态控制运动
         if sensor_data[0] and not sensor_data[1] and sensor_data[2] and sensor_data[3]:
             self.get_logger().info("执行：右大转弯")
             self.sharp_right_turn()
 
-        elif sensor_data[0] and  sensor_data[1] and  not sensor_data[2] and sensor_data[3]:
+        elif sensor_data[0] and sensor_data[1] and not sensor_data[2] and sensor_data[3]:
             self.get_logger().info("执行：左大转弯")
             self.sharp_left_turn()
 
@@ -185,72 +214,54 @@ class RobotController(Node):
             self.get_logger().info("执行：直走")
             self.move_forward()
 
-        elif not sensor_data[0] and not sensor_data[1]  and  sensor_data[2] and  sensor_data[3]:
+        elif not sensor_data[0] and not sensor_data[1] and sensor_data[2] and sensor_data[3]:
             self.get_logger().info("执行：左转")
             self.turn_left()
 
-        elif  sensor_data[0] and  sensor_data[1] and not sensor_data[2] and not sensor_data[3]:
+        elif sensor_data[0] and sensor_data[1] and not sensor_data[2] and not sensor_data[3]:
             self.get_logger().info("执行：右转")
             self.turn_right()
 
-        elif sensor_data[0] and  sensor_data[1] and not sensor_data[2] and sensor_data[3]:
-            self.get_logger().info("执行：右转")
-            self.turn_right()
-
-        elif sensor_data[0] and not sensor_data[1] and   sensor_data[2] and sensor_data[3]:
+        elif sensor_data[0] and not sensor_data[1] and sensor_data[2] and sensor_data[3]:
             self.get_logger().info("执行：左转")
             self.turn_left()
 
-        elif  sensor_data[0] and not  sensor_data[1] and not sensor_data[2] and not sensor_data[3]:
+        elif sensor_data[0] and not sensor_data[1] and not sensor_data[2] and not sensor_data[3]:
             self.get_logger().info("执行：右大转弯")
             self.sharp_right_turn()
 
-        elif not sensor_data[0] and not sensor_data[1] and not sensor_data[2] and  sensor_data[3]:
+        elif not sensor_data[0] and not sensor_data[1] and not sensor_data[2] and sensor_data[3]:
             self.get_logger().info("执行：左大转弯")
             self.sharp_left_turn()
 
-        elif  sensor_data[0] and not sensor_data[1] and not sensor_data[2] and sensor_data[3]:
-            self.get_logger().info("执行：直走")
-            self.move_forward()
-
-        elif sensor_data[0] and sensor_data[1] and sensor_data[2] and sensor_data[3]:
-            self.get_logger().info("所有传感器都检测到线，继续前进")
-            self.move_forward()
-
+        # NOTE: Removed the contradictory "all(sensor_data)" block that was causing logic conflicts.
+        
         else:
             self.get_logger().info("传感器状态异常，停止机器人")
             self.stop_robot()
 
     def turn_right(self):
-        """机器人向右小转弯，线偏右时调整"""
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.3
-        move_cmd.angular.z = -5.0
-        self.mecanum_pub.publish(move_cmd)
+        """机器人向右小转弯，速度按比例调整"""
+        self.target_speed = self.live_max_vel * 0.6
+        self.target_angular = -5.0
 
     def turn_left(self):
-        """机器人向左小转弯，线偏左时调整"""
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.3
-        move_cmd.angular.z = 5.0
-        self.mecanum_pub.publish(move_cmd)
+        """机器人向左小转弯，速度按比例调整"""
+        self.target_speed = self.live_max_vel * 0.6
+        self.target_angular = 5.0
 
     def sharp_right_turn(self):
-        """机器人右大转弯，会减速"""
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.2
-        move_cmd.angular.z = -10.0
-        self.mecanum_pub.publish(move_cmd)
+        """机器人右大转弯，速度按比例调整"""
+        self.target_speed = self.live_max_vel * 0.4
+        self.target_angular = -10.0
 
     def sharp_left_turn(self):
-        """机器人左大转弯，会减速"""
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.2
-        move_cmd.angular.z = 10.0
-        self.mecanum_pub.publish(move_cmd)
+        """机器人左大转弯，速度按比例调整"""
+        self.target_speed = self.live_max_vel * 0.4
+        self.target_angular = 10.0
 
     def set_rgb(self, color):
-        """设置RGB灯颜色，根据色名字设定对应RGB值"""
+        """设置RGB灯颜色"""
         rgb_msg = RGBStates()
         rgb_state1 = RGBState()
         rgb_state1.index = 1
@@ -266,7 +277,7 @@ class RobotController(Node):
         elif color == "yellow":
             rgb_state1.red, rgb_state1.green, rgb_state1.blue = 255, 255, 0
             rgb_state2.red, rgb_state2.green, rgb_state2.blue = 255, 255, 0
-        else:  # 关闭灯光
+        else:  
             rgb_state1.red, rgb_state1.green, rgb_state1.blue = 0, 0, 0
             rgb_state2.red, rgb_state2.green, rgb_state2.blue = 0, 0, 0
 
@@ -277,22 +288,22 @@ class RobotController(Node):
     def play_buzzer(self):
         """激活蜂鸣器"""
         buzzer_msg = BuzzerState()
-        buzzer_msg.freq = 1000  # 频率1000Hz
-        buzzer_msg.on_time = 0.1  # 响铃时间0.1秒
-        buzzer_msg.off_time = 0.1  # 静音时间0.1秒
-        buzzer_msg.repeat = 1  # 重复次数
+        buzzer_msg.freq = 1000  
+        buzzer_msg.on_time = 0.1  
+        buzzer_msg.off_time = 0.1  
+        buzzer_msg.repeat = 1  
         self.buzzer_pub.publish(buzzer_msg)
         self.get_logger().info("蜂鸣器响起")
 
     def image_callback(self, img_msg):
-        """图像回调，转为OpenCV图像，处理颜色识别"""
+        """图像回调"""
         img = self.bridge.imgmsg_to_cv2(img_msg, 'bgr8')
         frame = self.process_image(img)
         cv2.imshow('Processed Frame', frame)
         cv2.waitKey(1)
 
     def process_image(self, img):
-        """颜色识别函数，更新detect_color状态"""
+        """颜色识别函数"""
         img_copy = img.copy()
         frame_resize = cv2.resize(img_copy, self.size, interpolation=cv2.INTER_NEAREST)
         frame_gb = cv2.GaussianBlur(frame_resize, (3, 3), 3)
@@ -338,7 +349,7 @@ class RobotController(Node):
         contour_max = None
         for c in contours:
             area = abs(cv2.contourArea(c))
-            if area > area_max and area > 300:  # 面积阈值避免噪声
+            if area > area_max and area > 300:  
                 area_max = area
                 contour_max = c
         return contour_max, area_max

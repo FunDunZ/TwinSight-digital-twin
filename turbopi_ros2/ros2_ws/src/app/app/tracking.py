@@ -473,7 +473,8 @@ class OjbectTrackingNode(Node):
 
     def handle_target_lost_pan_tilt(self):
         """处理云台追踪目标丢失，保持云台位置"""
-        self.publish_servo(self.tracker.servo_x, self.tracker.servo_y)
+        if self.tracker is not None:    
+            self.publish_servo(self.tracker.servo_x, self.tracker.servo_y)
 
     def handle_target_lost_chassis(self):
         """处理车体追踪目标丢失，停止底盘运动"""

@@ -49,6 +49,24 @@ def launch_setup(context):
             os.path.join(app_package_path, 'launch/start_app.launch.py')),
     )
 
+    bno055_publisher = Node(
+        package='imu_pi',
+        executable='bno055_publisher',
+        name='bno055_publisher',
+        output='screen',
+    )
+
+    temp_odom_node = Node(
+        package='bringup',
+        executable='temp_odom',
+        name='temp_odom',
+        output='screen',
+        parameters=[{
+            'imu_topic': '/imu/data',
+            'use_imu_yaw_rate': True,
+        }]
+    )
+
     startup_check_node = Node(
         package='bringup',
         executable='startup_check',
@@ -61,12 +79,14 @@ def launch_setup(context):
     )
 
     return [
-        web_video_server_launch,
-        rosbridge_websocket_launch,
+        #web_video_server_launch,
+        #rosbridge_websocket_launch,
         controller_launch,
         usb_cam_launch,
         #sonar_controller_launch,
-        start_app_launch,
+        #start_app_launch,
+        bno055_publisher,
+        temp_odom_node,
         delayed_startup_check  
     ]
 

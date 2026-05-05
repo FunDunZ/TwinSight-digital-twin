@@ -128,7 +128,7 @@ class HandTrajectoryNode(Node):
         self.image_sub = None
         self.count_miss = 0
         self.last_point = [0, 0]
-        model_path = '/home/ubuntu/ros2_ws/src/example/example/mediapipe_example/model/hand_landmarker.task'
+        model_path = '/home/ubuntu/ros2_ws/src/example/example/model/hand_landmarker.task'
         base_options = python.BaseOptions(model_asset_path=model_path)
         options = vision.HandLandmarkerOptions(base_options=base_options, min_hand_detection_confidence=0.2, num_hands=2)
         self.detector = vision.HandLandmarker.create_from_options(options)

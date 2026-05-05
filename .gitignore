@@ -1,3 +1,4 @@
+# OS files
 .DS_Store
 .DS_Store?
 ._*
@@ -5,8 +6,29 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# VS Code
 .vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Linux core dump files (crash dumps — binary, never commit these)
+core
+**/core
+
+# ROS 2 colcon build output (generated — do not commit)
+turbopi_ros2/ros2_ws/build/
+turbopi_ros2/ros2_ws/install/
+turbopi_ros2/ros2_ws/log/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Unity generated folders (already on remote, listed here for future machines)
+TwinSight_dev_v1_unity/Library/
+TwinSight_dev_v1_unity/Temp/
+TwinSight_dev_v1_unity/Logs/
